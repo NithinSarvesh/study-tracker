@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Study Tracker</title>
+    <style>
+      :root {
+        font-family: Arial, sans-serif;
+        color: #1f2937;
+        background: #f8fafc;
+      }
+      body {
+        margin: 0;
+        padding: 1.5rem;
+      }
+      h1,
+      h2 {
+        margin: 0 0 0.75rem;
+      }
+      .grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 1rem;
+      }
+      form {
+        display: grid;
+        gap: 0.5rem;
+      }
+      input,
+      select,
+      button {
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 0.45rem 0.55rem;
+        font: inherit;
+      }
+      button {
+        background: #2563eb;
+        border-color: #2563eb;
+        color: #fff;
+        cursor: pointer;
+      }
+      ul {
+        margin: 0.5rem 0 0;
+        padding-left: 1rem;
+      }
+      .muted {
+        color: #6b7280;
+        font-size: 0.9rem;
+      }
+      .bars {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(24px, 1fr));
+        gap: 0.4rem;
+        align-items: end;
+        height: 140px;
+        margin-top: 0.5rem;
+      }
+      .bar-wrap {
+        display: grid;
+        justify-items: center;
+        gap: 0.35rem;
+      }
+      .bar {
+        width: 100%;
+        max-width: 34px;
+        background: linear-gradient(#60a5fa, #2563eb);
+        border-radius: 6px 6px 2px 2px;
+        min-height: 2px;
+      }
+      .bar-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+      }
+      .small {
+        font-size: 0.8rem;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Study Tracker</h1>
+    <p class="muted">Track subjects, study hours, streaks, weekly progress, and exam countdowns.</p>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Add Subject</h2>
+        <form id="subject-form">
+          <input id="subject-name" type="text" placeholder="e.g. Mathematics" required />
+          <button type="submit">Add Subject</button>
+        </form>
+        <ul id="subject-list"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Track Study Hours</h2>
+        <form id="study-form">
+          <select id="study-subject" required></select>
+          <input id="study-hours" type="number" min="0.25" step="0.25" placeholder="Hours" required />
+          <input id="study-date" type="date" required />
+          <button type="submit">Log Study Session</button>
+        </form>
+        <p id="total-hours" class="small"></p>
+        <ul id="study-summary"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Streaks</h2>
+        <p id="streak-value"></p>
+      </section>
+
+      <section class="card">
+        <h2>Weekly Graph</h2>
+        <div id="weekly-bars" class="bars"></div>
+      </section>
+
+      <section class="card">
+        <h2>Exams Countdown</h2>
+        <form id="exam-form">
+          <input id="exam-name" type="text" placeholder="Exam name" required />
+          <input id="exam-date" type="date" required />
+          <button type="submit">Add Exam</button>
+        </form>
+        <ul id="exam-list"></ul>
+      </section>
+    </div>
+
+    <script>
+      const STORAGE_KEY = 'studyTrackerData';
+      const todayISO = () => new Date().toISOString().slice(0, 10);
+      const fmtShortDay = (date) => date.toLocaleDateString(undefined, { weekday: 'short' });
+      const escapeHtml = (value) =>
+        String(value)
+          .replaceAll('&', '&amp;')
+          .replaceAll('<', '&lt;')
+          .replaceAll('>', '&gt;')
+          .replaceAll('"', '&quot;')
+          .replaceAll("'", '&#39;');
+
+      const loadState = () => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return { subjects: ['General'], sessions: [], exams: [] };
+          const parsed = JSON.parse(raw);
+          return {
+            subjects: Array.isArray(parsed.subjects) && parsed.subjects.length ? parsed.subjects : ['General'],
+            sessions: Array.isArray(parsed.sessions) ? parsed.sessions : [],
+            exams: Array.isArray(parsed.exams) ? parsed.exams : []
+          };
+        } catch {
+          return { subjects: ['General'], sessions: [], exams: [] };
+        }
+      };
+
+      const state = loadState();
+      const els = {
+        subjectForm: document.getElementById('subject-form'),
+        subjectName: document.getElementById('subject-name'),
+        subjectList: document.getElementById('subject-list'),
+        studyForm: document.getElementById('study-form'),
+        studySubject: document.getElementById('study-subject'),
+        studyHours: document.getElementById('study-hours'),
+        studyDate: document.getElementById('study-date'),
+        totalHours: document.getElementById('total-hours'),
+        studySummary: document.getElementById('study-summary'),
+        streakValue: document.getElementById('streak-value'),
+        weeklyBars: document.getElementById('weekly-bars'),
+        examForm: document.getElementById('exam-form'),
+        examName: document.getElementById('exam-name'),
+        examDate: document.getElementById('exam-date'),
+        examList: document.getElementById('exam-list')
+      };
+
+      els.studyDate.value = todayISO();
+
+      const persist = () => localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+
+      const renderSubjects = () => {
+        els.subjectList.innerHTML = state.subjects.map((s) => `<li>${escapeHtml(s)}</li>`).join('');
+        els.studySubject.innerHTML = state.subjects
+          .map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`)
+          .join('');
+      };
+
+      const getTotals = () => {
+        const totals = {};
+        for (const session of state.sessions) {
+          totals[session.subject] = (totals[session.subject] || 0) + session.hours;
+        }
+        return totals;
+      };
+
+      const renderStudy = () => {
+        const totals = getTotals();
+        const total = Object.values(totals).reduce((sum, h) => sum + h, 0);
+        els.totalHours.textContent = `Total studied: ${total.toFixed(2)} hours`;
+        const lines = Object.entries(totals)
+          .sort((a, b) => b[1] - a[1])
+          .map(([subject, hours]) => `<li>${escapeHtml(subject)}: ${hours.toFixed(2)} hrs</li>`);
+        els.studySummary.innerHTML = lines.length ? lines.join('') : '<li class="muted">No sessions yet</li>';
+      };
+
+      const asDateKey = (dt) => {
+        const d = new Date(dt);
+        d.setHours(0, 0, 0, 0);
+        return d.toISOString().slice(0, 10);
+      };
+
+      const renderStreak = () => {
+        const days = new Set(state.sessions.map((s) => s.date));
+        let count = 0;
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        while (days.has(asDateKey(now))) {
+          count += 1;
+          now.setDate(now.getDate() - 1);
+        }
+        els.streakValue.textContent = count ? `${count} day streak 🔥` : 'No active streak yet';
+      };
+
+      const renderWeeklyGraph = () => {
+        const dayTotals = new Map();
+        for (const s of state.sessions) {
+          dayTotals.set(s.date, (dayTotals.get(s.date) || 0) + s.hours);
+        }
+        const days = [];
+        for (let i = 6; i >= 0; i--) {
+          const d = new Date();
+          d.setHours(0, 0, 0, 0);
+          d.setDate(d.getDate() - i);
+          const key = asDateKey(d);
+          days.push({
+            label: fmtShortDay(d),
+            hours: dayTotals.get(key) || 0
+          });
+        }
+        const max = Math.max(1, ...days.map((d) => d.hours));
+        els.weeklyBars.innerHTML = days
+          .map(
+            (d) => `<div class="bar-wrap"><div class="bar" style="height:${Math.round((d.hours / max) * 100)}%" title="${d.hours.toFixed(2)} hrs"></div><span class="bar-label">${d.label}</span></div>`
+          )
+          .join('');
+      };
+
+      const renderExams = () => {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const rows = state.exams
+          .map((exam) => {
+            const examDate = new Date(exam.date);
+            examDate.setHours(0, 0, 0, 0);
+            const days = Math.ceil((examDate - now) / (24 * 60 * 60 * 1000));
+            if (days < 0) return null;
+            const msg = days === 0 ? 'Today' : `${days} day${days === 1 ? '' : 's'} left`;
+            return { ...exam, msg };
+          })
+          .filter(Boolean)
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        els.examList.innerHTML = rows.length
+          ? rows.map((e) => `<li>${escapeHtml(e.name)} (${e.date}): ${e.msg}</li>`).join('')
+          : '<li class="muted">No upcoming exams</li>';
+      };
+
+      const render = () => {
+        renderSubjects();
+        renderStudy();
+        renderStreak();
+        renderWeeklyGraph();
+        renderExams();
+      };
+
+      els.subjectForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const name = els.subjectName.value.trim();
+        if (!name) return;
+        if (!state.subjects.includes(name)) {
+          state.subjects.push(name);
+          persist();
+          render();
+        }
+        els.subjectName.value = '';
+      });
+
+      els.studyForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const subject = els.studySubject.value;
+        const hours = Number(els.studyHours.value);
+        const date = els.studyDate.value;
+        if (!subject || !date || !Number.isFinite(hours) || hours <= 0) return;
+        state.sessions.push({ subject, hours, date });
+        persist();
+        render();
+        els.studyHours.value = '';
+      });
+
+      els.examForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const name = els.examName.value.trim();
+        const date = els.examDate.value;
+        if (!name || !date) return;
+        state.exams.push({ name, date });
+        persist();
+        render();
+        els.examName.value = '';
+        els.examDate.value = '';
+      });
+
+      render();
+    </script>
+  </body>
+</html>
