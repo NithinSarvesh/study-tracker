@@ -10,4 +10,4 @@ A minimal Study Tracker for students.
 - Exam countdown
 
 ## Run
-Open `/tmp/workspace/NithinSarvesh/study-tracker/index.html` in a browser.
+Open `./index.html` in a browser.

@@ -92,7 +92,7 @@
       <section class="card">
         <h2>Add Subject</h2>
         <form id="subject-form">
-          <input id="subject-name" type="text" placeholder="e.g. Mathematics" required />
+          <input id="subject-name" type="text" placeholder="e.g. Mathematics" aria-label="Subject name" required />
           <button type="submit">Add Subject</button>
         </form>
         <ul id="subject-list"></ul>
@@ -101,9 +101,9 @@
       <section class="card">
         <h2>Track Study Hours</h2>
         <form id="study-form">
-          <select id="study-subject" required></select>
-          <input id="study-hours" type="number" min="0.25" step="0.25" placeholder="Hours" required />
-          <input id="study-date" type="date" required />
+          <select id="study-subject" aria-label="Study subject" required></select>
+          <input id="study-hours" type="number" min="0.25" step="0.25" placeholder="Hours" aria-label="Study hours" required />
+          <input id="study-date" type="date" aria-label="Study date" required />
           <button type="submit">Log Study Session</button>
         </form>
         <p id="total-hours" class="small"></p>
@@ -123,8 +123,8 @@
       <section class="card">
         <h2>Exams Countdown</h2>
         <form id="exam-form">
-          <input id="exam-name" type="text" placeholder="Exam name" required />
-          <input id="exam-date" type="date" required />
+          <input id="exam-name" type="text" placeholder="Exam name" aria-label="Exam name" required />
+          <input id="exam-date" type="date" aria-label="Exam date" required />
           <button type="submit">Add Exam</button>
         </form>
         <ul id="exam-list"></ul>
@@ -133,8 +133,9 @@
 
     <script>
       const STORAGE_KEY = 'studyTrackerData';
+      const MS_PER_DAY = 24 * 60 * 60 * 1000;
       const todayISO = () => new Date().toISOString().slice(0, 10);
-      const fmtShortDay = (date) => date.toLocaleDateString(undefined, { weekday: 'short' });
+      const formatShortDay = (date) => date.toLocaleDateString(undefined, { weekday: 'short' });
       const escapeHtml = (value) =>
         String(value)
           .replaceAll('&', '&amp;')
@@ -236,14 +237,14 @@
           d.setDate(d.getDate() - i);
           const key = asDateKey(d);
           days.push({
-            label: fmtShortDay(d),
+            label: formatShortDay(d),
             hours: dayTotals.get(key) || 0
           });
         }
         const max = Math.max(1, ...days.map((d) => d.hours));
         els.weeklyBars.innerHTML = days
           .map(
-            (d) => `<div class="bar-wrap"><div class="bar" style="height:${Math.round((d.hours / max) * 100)}%" title="${d.hours.toFixed(2)} hrs"></div><span class="bar-label">${d.label}</span></div>`
+            (d) => `<div class="bar-wrap"><div class="bar" style="height:${Math.round((d.hours / max) * 100)}%" title="${escapeHtml(`${d.hours.toFixed(2)} hrs`)}"></div><span class="bar-label">${escapeHtml(d.label)}</span></div>`
           )
           .join('');
       };
@@ -255,7 +256,7 @@
           .map((exam) => {
             const examDate = new Date(exam.date);
             examDate.setHours(0, 0, 0, 0);
-            const days = Math.ceil((examDate - now) / (24 * 60 * 60 * 1000));
+            const days = Math.ceil((examDate - now) / MS_PER_DAY);
             if (days < 0) return null;
             const msg = days === 0 ? 'Today' : `${days} day${days === 1 ? '' : 's'} left`;
             return { ...exam, msg };
@@ -264,7 +265,7 @@
           .sort((a, b) => a.date.localeCompare(b.date));
 
         els.examList.innerHTML = rows.length
-          ? rows.map((e) => `<li>${escapeHtml(e.name)} (${e.date}): ${e.msg}</li>`).join('')
+          ? rows.map((e) => `<li>${escapeHtml(e.name)} (${escapeHtml(e.date)}): ${escapeHtml(e.msg)}</li>`).join('')
           : '<li class="muted">No upcoming exams</li>';
       };
 
