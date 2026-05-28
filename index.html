@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyForge — Cinematic Study Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Animated Background -->
+    <div class="bg-animation">
+        <div class="orb"></div>
+        <div class="orb"></div>
+        <div class="orb"></div>
+        <div class="orb"></div>
+    </div>
+    <canvas id="particleCanvas"></canvas>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Login Page -->
+    <div class="login-page" id="loginPage">
+        <div class="login-container glass">
+            <div class="login-logo">📚</div>
+            <h1 class="login-title">StudyForge</h1>
+            <p class="login-subtitle" id="loginSubtitle">Track your study journey like a pro</p>
+
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group" id="nameGroup" style="display:none;">
+                    <input type="text" id="regName" placeholder="Full Name">
+                    <span class="input-icon">👤</span>
+                </div>
+                <div class="form-group">
+                    <input type="email" id="loginEmail" placeholder="Email Address" required>
+                    <span class="input-icon">📧</span>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="loginPassword" placeholder="Password" required>
+                    <span class="input-icon">🔒</span>
+                </div>
+                <button type="submit" class="btn btn-primary" id="loginBtn">Sign In</button>
+            </form>
+
+            <p class="login-toggle">
+                <span id="toggleText">Don't have an account?</span>
+                <a onclick="toggleAuthMode()" id="toggleLink">Sign Up</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div class="app-container" id="appContainer">
+        <nav class="navbar">
+            <div class="nav-brand">
+                <span class="brand-icon">📚</span>
+                <span>StudyForge</span>
+            </div>
+            <div class="nav-user">
+                <div class="nav-streak">🔥 <span id="streakCount">0</span> day streak</div>
+                <div class="nav-user-info">
+                    <div class="name" id="navUserName">Student</div>
+                    <div class="role">Scholar</div>
+                </div>
+                <div class="nav-avatar" id="navAvatar">S</div>
+                <button class="logout-btn" onclick="handleLogout()">Logout</button>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            <div class="quote-card">
+                <p class="quote-text" id="quoteText">"The secret of getting ahead is getting started."</p>
+                <p class="quote-author" id="quoteAuthor">— Mark Twain</p>
+            </div>
+
+            <div class="dashboard-header">
+                <h1>Welcome back, <span id="greetingName">Student</span>! 👋</h1>
+                <p>Let's make today productive.</p>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-card glass animate-in delay-1">
+                    <div class="stat-icon">⏱️</div>
+                    <div class="stat-value" id="statTodayHours">0h 0m</div>
+                    <div class="stat-label">Today's Study</div>
+                </div>
+                <div class="stat-card glass animate-in delay-2">
+                    <div class="stat-icon">📚</div>
+                    <div class="stat-value" id="statTotalHours">0h</div>
+                    <div class="stat-label">Total Hours</div>
+                </div>
+                <div class="stat-card glass animate-in delay-3">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-value" id="statStreak">0</div>
+                    <div class="stat-label">Day Streak</div>
+                </div>
+                <div class="stat-card glass animate-in delay-4">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-value" id="statSubjects">0</div>
+                    <div class="stat-label">Subjects</div>
+                </div>
+            </div>
+
+            <div class="content-grid">
+                <div class="section-card glass">
+                    <div class="section-header"><h2><span class="icon">📖</span> My Subjects</h2></div>
+                    <div class="subjects-list" id="subjectsList"></div>
+                    <div class="add-form">
+                        <input type="text" id="newSubjectName" placeholder="Subject name...">
+                        <select id="newSubjectColor">
+                            <option value="#6c63ff">💜 Purple</option>
+                            <option value="#00d4aa">💚 Green</option>
+                            <option value="#ff6b9d">💗 Pink</option>
+                            <option value="#ffd93d">💛 Yellow</option>
+                            <option value="#45b7d1">💙 Blue</option>
+                            <option value="#f39c12">🧡 Orange</option>
+                        </select>
+                        <button class="btn-add" onclick="addSubject()">+ Add</button>
+                    </div>
+                </div>
+
+                <div class="section-card glass">
+                    <div class="section-header"><h2><span class="icon">⏰</span> Study Timer</h2></div>
+                    <div class="timer-subject-select">
+                        <select id="timerSubjectSelect">
+                            <option value="">Select a subject...</option>
+                        </select>
+                    </div>
+                    <div class="timer-display">
+                        <div class="timer-circle" id="timerCircle">
+                            <svg viewBox="0 0 206 206">
+                                <circle cx="103" cy="103" r="100" id="timerProgress"></circle>
+                            </svg>
+                            <div class="timer-time" id="timerDisplay">00:00:00</div>
+                            <div class="timer-label">Focus Time</div>
+                        </div>
+                        <div class="timer-controls">
+                            <button class="btn-start" id="btnStart" onclick="startTimer()">▶ Start</button>
+                            <button class="btn-pause" id="btnPause" onclick="pauseTimer()" style="display:none;">⏸ Pause</button>
+                            <button class="btn-stop" id="btnStop" onclick="stopTimer()" style="display:none;">⏹ Stop</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-grid">
+                <div class="section-card glass">
+                    <div class="section-header"><h2><span class="icon">📊</span> Weekly Overview</h2></div>
+                    <div class="chart-container">
+                        <canvas id="weeklyChart"></canvas>
+                    </div>
+                </div>
+                <div class="section-card glass">
+                    <div class="section-header"><h2><span class="icon">🎓</span> Exam Countdown</h2></div>
+                    <div class="exams-list" id="examsList"></div>
+                    <div class="add-exam-form">
+                        <input type="text" id="examName" placeholder="Exam name...">
+                        <input type="date" id="examDate">
+                        <button class="btn-add" onclick="addExam()">+ Add</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-grid">
+                <div class="section-card glass">
+                    <div class="section-header"><h2><span class="icon">🔥</span> Streak Calendar</h2></div>
+                    <div class="streak-day-labels">
+                        <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span>
+                        <span>Fri</span><span>Sat</span><span>Sun</span>
+                    </div>
+                    <div class="streak-calendar" id="streakCalendar"></div>
+                </div>
+                <div class="section-card glass">
+                    <div class="section-header"><h2><span class="icon">📝</span> Today's Activity</h2></div>
+                    <div class="log-list" id="logList">
+                        <p style="color: var(--text-muted); text-align: center; padding: 20px;">No activity yet today.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Load script AFTER HTML -->
+    <script type="module" src="script.js"></script>
+</body>
+</html>
